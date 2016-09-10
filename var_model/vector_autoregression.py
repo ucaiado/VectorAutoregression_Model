@@ -1,7 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Implement the Vector autogression model
+Implement the Vector autogression model according to Lutkepohl, 2005. The most
+of the code used as reference p.70 ~ p.75, from chapter 3 of the book 'New
+Introduction to Multiple Time Series Analysis'.
 
 @author: ucaiado
 
@@ -9,6 +11,7 @@ Created on 09/06/2016
 """
 # import libraries
 import numpy as np
+from numpy.linalg import inv
 import pandas as pd
 
 '''
@@ -41,29 +44,65 @@ class VectorAutoregression(object):
     Create a model from a stationary multivariate time series using lagged
     values
     '''
-    class __init__(self, df_Y):
+    def __init__(self, df_Y):
         '''
         Initialize a VectorAutoregression object. Save all parameters as
         attributes. The data passed is assumed to be stationary
-        :param df_Y: dataframe. a 2-d variables matrix
+        :param df_Y: dataframe. a time series from the oldest to newest data
         '''
+        self.df_Y = df_Y
+        self.na_y = df_Y.values
         self.b_already_fitted = False
         self.i_p = None  # VAR order
-        self.df_A = None  # parameters estimator
-        self.df_v = None  # intercep estimator
+        self.na_A = None  # parameters estimator
+        self.na_v = None  # intercep estimator
+        self.na_Z = None
 
-    class fit(self, i_p):
+    def fit(self, i_p, b_report=False):
         '''
-        FIT a VAR model to the data using a i_p lag order. Save the parameters
+        Fit a VAR model to the data using a i_p lag order. Save the parameters
         found as attributes
         :param i_p: integer. Lag order
+        :*param b_report: boolean. print a report of the results
         '''
+        # initialize variable
         self.i_p = i_p  # VAR order
-        self.df_A = None  # parameters estimator
-        self.df_v = None  # intercep estimator
+        self.na_A = None  # parameters estimator
+        self.na_v = None  # intercep estimator
+        i_T, i_K = self.df_Y.shape  # number of observations and variables
         self.already_fitted = True
+        # reshape matrices
+        self.na_Z = self._get_z_mat(i_p)  # Z := [Z_0, ..., Z_T] (T x (Kp+1))
+        na_Z = self.na_Z.T  # ((Kp+1) x T)
+        na_ysample = self.na_y[i_p:].T  # Y := (y_1, ..., y_T)  (K x T)
+        # measure betas (Lutkepohl, p. 72):
+        #    \hat{B} := YZ'(ZZ')^{-1}  ((Kp+1) x K)
+        # given that B:= (v, A_1, A_2, ..., A_p)  (K x (Kp+1))
+        na_ZZTransp_inv = inv(np.dot(na_Z, na_Z.T))
+        na_betahat = np.dot(np.dot(na_ysample, na_Z.T), na_ZZTransp_inv).T
+        # apply vec(\hat{B}) to produce coefficient matrices (K x K)
+        # vec is a column stacking operator  (Lutkepohl, p. 70)
+        # The first term is the constant. Exclude it from A
+        self.na_betahat = na_betahat
+        self.na_A = na_betahat[1:].reshape((i_p, i_K, i_K))
+        self.na_v = na_betahat[0]
+        # TODO: I shouldnt have to do that
+        for idx in xrange(len(self.na_A)):
+            self.na_A[idx] = self.na_A[idx].T
+        # measure the covariance matrix of the error
+        # U ~ N(0, \Sigma_u) is the error matrix,  (K x T)
+        # and \Sigma_u = \frac{1}{T-Kp -1}*U*U.T,  (K x K)
+        na_u = na_ysample.T - np.dot(na_Z.T, na_betahat)  # (T x K)
+        na_omega = np.dot(na_u.T, na_u)
+        na_omega = na_omega/(i_T - float(i_K * i_p) - 1.)  # (K x K)
+        self.na_omega = na_omega
+        # calculate the information criterias
 
-    class forecast(self, i_h):
+        # print the report
+        if b_report:
+            pass
+
+    def forecast(self, i_h):
         '''
         Return the forecast based on the model fitted
         :param i_h: integer. Number of steps to forecast ahead
@@ -73,9 +112,30 @@ class VectorAutoregression(object):
             raise NotFitException(s_err)
         pass
 
-    class select_order(self, i_p):
+    def select_order(self, i_p):
         '''
         Return a dataframe with the values of fpe, aic, hq and sc tests
         :param i_p: integer. The maximum number of Lag orders to test
         '''
         pass
+
+    def _get_z_mat(self, i_p):
+        '''
+        Reshape data to be using the model in the form Z := [Z_0, ..., Z_T]
+        (T x Kp), Where T is the sample size and K refers to variables
+        :param i_p: integer. The maximum number of Lag orders to test
+        '''
+        # initiate variables
+        na_y = self.na_y
+        na_one = np.array([1.])
+        # reshape data to be in a column vector of the form
+        # Z_t := [[1], [y_t], [y_{t-1}], ... [y_{t - p + 1}]] ((Kp+1) x 1)
+        l_Z = []
+        for i in xrange(i_p-1, len(na_y)-1):
+            l_idx = range(i, i - i_p, -1)
+            na_Zt = np.hstack([na_one, na_y[l_idx].ravel()])
+            l_Z.append(na_Zt.T.copy())
+        # Z := [Z_0, ..., Z_T] ((Kp+1) x T)
+        na_Z = np.array(l_Z)
+
+        return na_Z
