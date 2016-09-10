@@ -51,7 +51,7 @@ class VectorAutoregression(object):
         :param df_Y: dataframe. a time series from the oldest to newest data
         '''
         self.df_Y = df_Y
-        self.na_y = df_Y.values
+        self.na_y = df_Y.values  # (N x K)
         self.b_already_fitted = False
         self.i_p = None  # VAR order
         self.na_A = None  # parameters estimator
@@ -69,33 +69,38 @@ class VectorAutoregression(object):
         self.i_p = i_p  # VAR order
         self.na_A = None  # parameters estimator
         self.na_v = None  # intercep estimator
-        i_T, i_K = self.df_Y.shape  # number of observations and variables
+        i_N, i_K = self.df_Y.shape  # number of observations and variables
+        i_T = i_N - i_p  # size of the sample
         self.already_fitted = True
         # reshape matrices
         self.na_Z = self._get_z_mat(i_p)  # Z := [Z_0, ..., Z_T] (T x (Kp+1))
-        na_Z = self.na_Z.T  # ((Kp+1) x T)
+        na_Z = self.na_Z.copy()  # ((Kp+1) x T)
         na_ysample = self.na_y[i_p:].T  # Y := (y_1, ..., y_T)  (K x T)
         # measure betas (Lutkepohl, p. 72):
-        #    \hat{B} := YZ'(ZZ')^{-1}  ((Kp+1) x K)
+        #    \hat{B} := YZ'(ZZ')^{-1}  (K x (Kp+1))
         # given that B:= (v, A_1, A_2, ..., A_p)  (K x (Kp+1))
         na_ZZTransp_inv = inv(np.dot(na_Z, na_Z.T))
-        na_betahat = np.dot(np.dot(na_ysample, na_Z.T), na_ZZTransp_inv).T
+        na_betahat = np.dot(np.dot(na_ysample, na_Z.T), na_ZZTransp_inv)
         # apply vec(\hat{B}) to produce coefficient matrices (K x K)
         # vec is a column stacking operator  (Lutkepohl, p. 70)
         # The first term is the constant. Exclude it from A
         self.na_betahat = na_betahat
-        self.na_A = na_betahat[1:].reshape((i_p, i_K, i_K))
-        self.na_v = na_betahat[0]
-        # TODO: I shouldnt have to do that
+        self.na_A = na_betahat[:, 1:].T.reshape((i_p, i_K, i_K))
+        self.na_v = na_betahat[:, 0]
+        # Transpose the matrices inside A. I shouldnt have to do that
         for idx in xrange(len(self.na_A)):
             self.na_A[idx] = self.na_A[idx].T
+        # reshape beta
+
         # measure the covariance matrix of the error
         # U ~ N(0, \Sigma_u) is the error matrix,  (K x T)
-        # and \Sigma_u = \frac{1}{T-Kp -1}*U*U.T,  (K x K)
-        na_u = na_ysample.T - np.dot(na_Z.T, na_betahat)  # (T x K)
-        na_omega = np.dot(na_u.T, na_u)
-        na_omega = na_omega/(i_T - float(i_K * i_p) - 1.)  # (K x K)
-        self.na_omega = na_omega
+        # \Sigma_u =E[U * U.T] = \frac{1}{T-Kp -1}*U*U.T,  (K x K)
+        # is a consistent estimator (Lutkepohl, p. 75)
+        na_U = na_ysample - np.dot(na_betahat, na_Z)  # (K x T)
+        self.na_U = na_U
+        na_Sigma = np.dot(na_U.T, na_U)
+        na_Sigma = na_Sigma/(i_T - float(i_K * i_p) - 1.)  # (K x K)
+        self.na_Sigma = na_Sigma.T
         # calculate the information criterias
 
         # print the report
@@ -131,11 +136,11 @@ class VectorAutoregression(object):
         # reshape data to be in a column vector of the form
         # Z_t := [[1], [y_t], [y_{t-1}], ... [y_{t - p + 1}]] ((Kp+1) x 1)
         l_Z = []
-        for i in xrange(i_p-1, len(na_y)-1):
-            l_idx = range(i, i - i_p, -1)
+        for t in xrange(i_p, len(na_y)):
+            l_idx = range(t - 1, t - i_p - 1, -1)
             na_Zt = np.hstack([na_one, na_y[l_idx].ravel()])
             l_Z.append(na_Zt.T.copy())
         # Z := [Z_0, ..., Z_T] ((Kp+1) x T)
-        na_Z = np.array(l_Z)
+        na_Z = np.array(l_Z).T
 
         return na_Z
