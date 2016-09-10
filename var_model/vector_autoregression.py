@@ -84,9 +84,10 @@ class VectorAutoregression(object):
         # apply vec(\hat{B}) to produce coefficient matrices (K x K)
         # vec is a column stacking operator  (Lutkepohl, p. 70)
         # The first term is the constant. Exclude it from A
-        self.na_betahat = na_betahat
         self.na_A = na_betahat[:, 1:].T.reshape((i_p, i_K, i_K))
         self.na_v = na_betahat[:, 0]
+        # new beta
+        self.na_betahat = np.vstack([self.na_v, np.vstack(self.na_A)])
         # Transpose the matrices inside A. I shouldnt have to do that
         for idx in xrange(len(self.na_A)):
             self.na_A[idx] = self.na_A[idx].T
@@ -96,9 +97,9 @@ class VectorAutoregression(object):
         # U ~ N(0, \Sigma_u) is the error matrix,  (K x T)
         # \Sigma_u =E[U * U.T] = \frac{1}{T-Kp -1}*U*U.T,  (K x K)
         # is a consistent estimator (Lutkepohl, p. 75)
-        na_U = na_ysample - np.dot(na_betahat, na_Z)  # (K x T)
+        na_U = na_ysample - np.dot(self.na_betahat.T, na_Z)  # (K x T)
         self.na_U = na_U
-        na_Sigma = np.dot(na_U.T, na_U)
+        na_Sigma = np.dot(na_U, na_U.T)
         na_Sigma = na_Sigma/(i_T - float(i_K * i_p) - 1.)  # (K x K)
         self.na_Sigma = na_Sigma.T
         # calculate the information criterias
