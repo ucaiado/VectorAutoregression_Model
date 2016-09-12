@@ -11,6 +11,7 @@ This project requires **Python 2.7** and the following Python libraries installe
 - [NumPy](http://www.numpy.org/)
 - [Pandas](http://pandas.pydata.org)
 - [Seaborn](https://web.stanford.edu/~mwaskom/software/seaborn/)
+- [Scipy](https://www.scipy.org/)
 
 
 ### Reference
