@@ -125,7 +125,6 @@ class VectorAutoregression(object):
             s_err = u'E necessario fitar um modelo antes de prever'
             raise NotFitException(s_err)
         # initiate variables
-        i_var_ord = len(self.na_A)
         i_n = len(self.na_A[0])
         na_rtn = np.zeros((1, i_n))
         na_min = np.zeros((1, i_n))
@@ -158,11 +157,11 @@ class VectorAutoregression(object):
             na_sigma_y += na_var_aux
         self.na_sigma_y = na_sigma_y
         # calculate the interval
-        na_sigma = na_sigma_y ** .5
+        na_sigma = np.diag(self.na_sigma_y) ** .5
         na_min = na_rtn - f_zvalue * na_sigma
         na_max = na_rtn + f_zvalue * na_sigma
 
-        return na_rtn, na_max[-1], na_min[-1]
+        return na_rtn, na_max, na_min
 
     def _estimate_ma_phis(self, i_h):
         '''
