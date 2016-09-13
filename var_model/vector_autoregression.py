@@ -182,12 +182,48 @@ class VectorAutoregression(object):
 
         return na_phis
 
-    def select_order(self, i_p):
+    def select_order(self, i_max_p):
         '''
-        Return a dataframe with the values of fpe, aic, hq and sc tests
-        :param i_p: integer. The maximum number of Lag orders to test
+        Return a report with the values of FPE, AIC, HQ and SC(BIC) tests
+        :param i_max_p: integer. The maximum number of Lag orders to test
         '''
-        raise NotImplementedError
+        d_rtn = {}
+        df_Y = self.df_Y.copy()
+        i_N, i_K = self.df_Y.shape
+        for i_ord in xrange(1, i_max_p + 1):
+            d_rtn[i_ord] = {}
+            i_T = i_N - i_ord
+            f_ord = i_ord * 1.
+            obj_var = VectorAutoregression(df_Y.copy())
+            obj_var.fit(i_ord)
+            f_det_Sigma_u = np.linalg.det(obj_var.na_Sigma.copy())
+            # measure FPE (Lutkepohl, p. 147)
+            f_cst = (i_T + i_K * f_ord + 1.) / (i_T - i_K * f_ord - 1.)**i_K
+            d_rtn[i_ord]['FPE'] = f_cst * f_det_Sigma_u
+            # measure AIC
+            d_rtn[i_ord]['AIC'] = np.log(f_det_Sigma_u)
+            d_rtn[i_ord]['AIC'] += (2. * f_ord * i_K**2.)/i_T
+            # measure HQ
+            d_rtn[i_ord]['HQ'] = np.log(f_det_Sigma_u)
+            f_cst = (2. * np.log(np.log(i_T * 1.))) / (i_T) * f_ord * i_K**2
+            d_rtn[i_ord]['HQ'] += f_cst
+            # measure BIC
+            f_cst = (np.log(i_T * 1.)) / (i_T) * f_ord * i_K**2
+            d_rtn[i_ord]['SC(BIC)'] = np.log(f_det_Sigma_u)
+            d_rtn[i_ord]['SC(BIC)'] += f_cst
+
+        # make the table
+        df_rtn = pd.DataFrame(d_rtn)
+        df_rtn = df_rtn.round(4).T
+        df_rtn.index.name = 'Ordem'
+
+        # check the minium order by criteria
+        s_msg = '  Critério {}:  \t\tOrd. {}'
+        print 'Ordem com menor valor para cada Critério:'
+        for s_col in ['FPE', 'AIC', 'HQ', 'SC(BIC)']:
+            print s_msg.format(s_col, np.argmin(df_rtn.ix[:, s_col]))
+        print '\n\n\n'
+        print df_rtn
 
     def _get_z_mat(self, i_p):
         '''
