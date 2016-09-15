@@ -130,7 +130,7 @@ class VectorAutoregression(object):
         na_min = np.zeros((1, i_n))
         na_max = np.zeros((1, i_n))
         f_zvalue = stats.norm.ppf(1. - f_alpha / 2.)
-        # invert the order to access in a more natural way
+        # invert the order to access the newest data first
         l_values = list(na_y)[::-1]
         # apply: E_t[t_{t+1}] = v + A_1 y_t + A_2 y_{t-1} + ... + A_p y_{t-p+2}
         # (Lutkepohl, p. 32 ~ 37)
