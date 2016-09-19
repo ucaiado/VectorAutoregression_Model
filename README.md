@@ -1,7 +1,7 @@
 VectorAutoregression_Model
 ==================
 
-Implement the specification and estimation of a Vector autoregression ([VAR](https://en.wikipedia.org/wiki/Vector_autoregression)) model to forecats U.S. Dollar Future prices, a future contract traded at the Brazilian stock exchange. This assignment was done as part of the Master in [Quantitative Finance ](http://eesp.fgv.br/en/ensino/mestrado-profissional/economia/area-financas-quantitativas/presentation) course, at the FGV University. You can check my report <a href="http://nbviewer.jupyter.org/github/ucaiado/VectorAutoregression_Model/blob/617edefdf494ce997db45bd38fe1ac132100ffdd/report.ipynb" target="_blank">here</a> (the text is in Portuguese). I will use mostly Python to code the project.
+Implement the specification and estimation of a Vector autoregression ([VAR](https://en.wikipedia.org/wiki/Vector_autoregression)) model to forecats U.S. Dollar Future prices, a future contract traded at the Brazilian stock exchange. This assignment was done as part of the Master in [Quantitative Finance ](http://eesp.fgv.br/en/ensino/mestrado-profissional/economia/area-financas-quantitativas/presentation) course, at the FGV University. You can check my report <a href="https://nbviewer.jupyter.org/github/ucaiado/VectorAutoregression_Model/blob/master/report.ipynb" target="_blank">here</a> (the text is in Portuguese). I will use mostly Python to code the project.
 
 
 ### Install
